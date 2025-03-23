@@ -20,7 +20,7 @@ export default function Home() {
 
   useEffect(() => {
     // Initialize socket connection
-    const newSocket = io(process.env.API_URL || 'http://localhost:5001');
+    const newSocket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
     setSocket(newSocket);
 
     // Set up socket event listeners
