@@ -30,7 +30,6 @@ services:
       - mcp_server
     volumes:
       - ./backend:/app
-      - /app/node_modules
 
   mcp_server:
     build:

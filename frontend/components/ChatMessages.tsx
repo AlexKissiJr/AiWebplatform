@@ -19,6 +19,7 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    console.log('Messages updated:', messages);
   }, [messages]);
 
   // Format timestamp
@@ -34,24 +35,38 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
           <p>No messages yet. Start typing to interact with the AI assistant.</p>
         </div>
       ) : (
-        messages.map((message) => (
-          <div
-            key={message.id}
-            className={`message ${
-              message.sender === 'user' ? 'user-message' : 'ai-message'
-            }`}
-          >
-            <div className="flex justify-between mb-1">
-              <span className="font-semibold">
-                {message.sender === 'user' ? 'You' : 'AI Assistant'}
-              </span>
-              <span className="text-xs text-gray-500">
-                {formatTime(message.timestamp)}
-              </span>
-            </div>
-            <div className="whitespace-pre-wrap">{message.text}</div>
+        <>
+          <div className="bg-yellow-100 text-yellow-800 p-2 mb-3 rounded">
+            Debug: {messages.length} messages received
           </div>
-        ))
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`message ${
+                message.sender === 'user' ? 'user-message' : 'ai-message'
+              }`}
+            >
+              <div className="flex justify-between mb-1">
+                <span className="font-semibold">
+                  {message.sender === 'user' ? 'You' : 'AI Assistant'}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {formatTime(message.timestamp)}
+                </span>
+              </div>
+              <div className="whitespace-pre-wrap">
+                {/* Handle JSON responses in a more readable way */}
+                {typeof message.text === 'string' && message.text.startsWith('{') && message.text.endsWith('}') ? (
+                  <pre className="bg-gray-100 p-2 rounded overflow-auto">
+                    {message.text}
+                  </pre>
+                ) : (
+                  message.text
+                )}
+              </div>
+            </div>
+          ))}
+        </>
       )}
       <div ref={messagesEndRef} />
     </div>

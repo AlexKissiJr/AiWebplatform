@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ChatInput from '../components/ChatInput';
 import ChatMessages from '../components/ChatMessages';
+import ModelSelector from '../components/ModelSelector';
 import io from 'socket.io-client';
 
 // Define message interface
@@ -17,6 +18,28 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [socket, setSocket] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('rule-based');
+
+  const addMessage = useCallback((message: Message) => {
+    console.log('Adding message:', message);
+    setMessages((prevMessages) => {
+      const newMessages = [...prevMessages, message];
+      console.log('New messages state:', newMessages);
+      return newMessages;
+    });
+  }, []);
+
+  // Add test message on first load to verify rendering works
+  useEffect(() => {
+    console.log('Initial component mount');
+    // Add a welcome message to verify message display works
+    addMessage({
+      id: 'welcome-' + Date.now(),
+      text: 'Welcome! Type a message to interact with the AI assistant.',
+      sender: 'ai',
+      timestamp: Date.now(),
+    });
+  }, [addMessage]);
 
   useEffect(() => {
     // Initialize socket connection
@@ -35,15 +58,28 @@ export default function Home() {
     });
 
     newSocket.on('messageResponse', (data: { message: string }) => {
-      addMessage({
-        id: Date.now().toString(),
-        text: data.message,
-        sender: 'ai',
-        timestamp: Date.now(),
-      });
+      console.log('Received message response from server:', data);
+      console.log('Message content:', data.message);
+      
+      // Add visual notification that we got a response
+      console.warn('AI RESPONSE RECEIVED - check if it appears in the UI');
+      
+      // Force a UI update by using setTimeout
+      setTimeout(() => {
+        const responseId = 'ai-response-' + Date.now();
+        console.log('Creating AI message with ID:', responseId);
+        
+        addMessage({
+          id: responseId,
+          text: data.message,
+          sender: 'ai',
+          timestamp: Date.now(),
+        });
+      }, 100);
     });
 
     newSocket.on('error', (data: { message: string }) => {
+      console.log('Received error:', data);
       addMessage({
         id: Date.now().toString(),
         text: `Error: ${data.message}`,
@@ -56,14 +92,12 @@ export default function Home() {
     return () => {
       newSocket.disconnect();
     };
-  }, []);
-
-  const addMessage = (message: Message) => {
-    setMessages((prevMessages) => [...prevMessages, message]);
-  };
+  }, [addMessage]);
 
   const sendMessage = (text: string) => {
     if (!text.trim()) return;
+
+    console.log('Sending message:', text);
 
     // Create a new message
     const newMessage: Message = {
@@ -75,11 +109,14 @@ export default function Home() {
 
     // Add to messages
     addMessage(newMessage);
+    console.log('Messages state after adding user message:', messages);
 
     // Send to server
     if (socket && isConnected) {
-      socket.emit('sendMessage', { message: text });
+      console.log('Emitting sendMessage event to socket');
+      socket.emit('sendMessage', { message: text, modelId: selectedModel });
     } else {
+      console.log('Not connected to socket, adding error message');
       addMessage({
         id: Date.now().toString(),
         text: 'Error: Not connected to server. Please try again later.',
@@ -89,9 +126,41 @@ export default function Home() {
     }
   };
 
+  const handleModelChange = async (modelId: string) => {
+    setSelectedModel(modelId);
+    console.log('Selected model changed to:', modelId);
+    
+    try {
+      // Notify the backend of the model change
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/models/select`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ modelId }),
+      });
+      
+      if (response.ok) {
+        // Add a system message indicating the model change
+        addMessage({
+          id: 'model-change-' + Date.now(),
+          text: `Switched to ${modelId === 'rule-based' ? 'rule-based parsing' : 'AI model: ' + modelId}`,
+          sender: 'ai',
+          timestamp: Date.now(),
+        });
+      } else {
+        console.error('Failed to switch model');
+      }
+    } catch (error) {
+      console.error('Error switching model:', error);
+    }
+  };
+
   return (
     <main className="chat-container">
-      <h1 className="text-3xl font-bold mb-6">AI Unreal Engine Assistant</h1>
+      <h1 className="text-3xl font-bold mb-2">AI Unreal Engine Assistant</h1>
+      
+      <ModelSelector onModelChange={handleModelChange} />
       
       <div className="mb-4">
         {!isConnected && (

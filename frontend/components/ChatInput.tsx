@@ -24,7 +24,7 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder="Type a message to generate Unreal Engine content..."
-        className="flex-1 p-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 p-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black placeholder-gray-500"
       />
       <button
         type="submit"
