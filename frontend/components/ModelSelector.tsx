@@ -24,6 +24,7 @@ const ModelSelector = ({ onModelChange }: ModelSelectorProps) => {
   // Default endpoints that will be used
   const defaultEndpoints = {
     'deepseek-r1': 'https://api.together.xyz/v1/completions',
+    'gemini-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
     'llama3': 'https://api.together.xyz/v1/chat/completions',
     'local-ollama': 'http://localhost:11434/api/chat'
   };

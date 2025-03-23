@@ -10,6 +10,12 @@ class AIService {
         defaultEndpoint: 'https://api.together.xyz/v1/completions',
         requiresConfig: true
       },
+      'gemini-flash': {
+        name: 'Gemini Flash 2.0',
+        description: 'Google Gemini model for fast and efficient assistance',
+        defaultEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+        requiresConfig: true
+      },
       'llama3': {
         name: 'Llama 3',
         description: 'Unreal Engine expert assistant',
@@ -34,6 +40,7 @@ class AIService {
     this.currentModel = 'rule-based';
     this.modelConfigs = {
       'deepseek-r1': { apiKey: '', endpoint: this.availableModels['deepseek-r1'].defaultEndpoint },
+      'gemini-flash': { apiKey: '', endpoint: this.availableModels['gemini-flash'].defaultEndpoint },
       'llama3': { apiKey: '', endpoint: this.availableModels['llama3'].defaultEndpoint },
       'local-ollama': { apiKey: '', endpoint: this.availableModels['local-ollama'].defaultEndpoint }
     };
@@ -41,6 +48,14 @@ class AIService {
     // System prompts for different models
     this.systemPrompts = {
       'deepseek-r1': `You are an Unreal Engine expert assistant. Your job is to help interpret user instructions into specific Unreal Engine commands.
+When processing user messages, if you detect an intent to create, modify, or interact with Unreal Engine elements, provide a response in this format:
+COMMAND: {command_type}
+PARAMS: {JSON parameters for the command}
+
+Valid command types include: spawn_object, create_material, set_object_material, set_object_position, set_object_rotation, set_object_scale, create_blueprint, etc.
+If you don't understand the request or it's not related to Unreal Engine, respond conversationally.`,
+      
+      'gemini-flash': `You are an Unreal Engine expert assistant. Your job is to help interpret user instructions into specific Unreal Engine commands.
 When processing user messages, if you detect an intent to create, modify, or interact with Unreal Engine elements, provide a response in this format:
 COMMAND: {command_type}
 PARAMS: {JSON parameters for the command}
@@ -62,6 +77,9 @@ PARAMS: {JSON parameters}
 
 Example commands: spawn_object, create_material, create_blueprint, etc.`
     };
+
+    // Initialize with provided API key if available
+    this.updateModelConfig('gemini-flash', { apiKey: 'AIzaSyC_8YYVQghJwEkPUt0IAc5kd3ULDcXhbMM' });
   }
   
   // Get list of available models
@@ -166,6 +184,31 @@ Example commands: spawn_object, create_material, create_blueprint, etc.`
         
         const text = response.data.choices[0]?.text || '';
         console.log(`[AIService] DeepSeek-R1 response: ${text.substring(0, 100)}...`);
+        return this.parseAIResponse(text);
+        
+      } else if (this.currentModel === 'gemini-flash') {
+        // Gemini API format
+        const geminiMessages = messages.map(m => {
+          if (m.role === 'system') {
+            return { role: 'user', parts: [{ text: m.content }] };
+          } else {
+            return { role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] };
+          }
+        });
+
+        // URL with API key for Gemini
+        const geminiUrl = `${endpoint}?key=${modelConfig.apiKey}`;
+        
+        response = await axios.post(geminiUrl, {
+          contents: geminiMessages,
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 1000,
+          }
+        });
+        
+        const text = response.data.candidates[0]?.content?.parts[0]?.text || '';
+        console.log(`[AIService] Gemini Flash response: ${text.substring(0, 100)}...`);
         return this.parseAIResponse(text);
         
       } else if (this.currentModel === 'llama3') {
