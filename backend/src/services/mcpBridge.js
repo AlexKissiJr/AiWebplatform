@@ -74,6 +74,11 @@ class McpBridge {
   async sendMessage(message, modelId = 'rule-based') {
     console.log(`[McpBridge] Processing user message with model ${modelId}: ${message}`);
     
+    // SPECIAL DEBUG FOR TEST COMMAND
+    if (message.trim().toLowerCase() === 'test_unreal_connection') {
+      console.log('[McpBridge] *********** DETECTED TEST UNREAL CONNECTION COMMAND ***********');
+    }
+    
     // Generate a unique message ID
     const messageId = Date.now().toString();
     
@@ -101,8 +106,16 @@ class McpBridge {
         let aiResponse = null;
         let commandToExecute = null;
         
+        // Special handling for test_unreal_connection command
+        if (message.trim().toLowerCase() === 'test_unreal_connection') {
+          console.log('[McpBridge] Detected direct test_unreal_connection command');
+          commandToExecute = {
+            command: 'test_unreal_connection',
+            params: {}
+          };
+        }
         // Try to process with AI service first
-        if (modelId !== 'rule-based') {
+        else if (modelId !== 'rule-based') {
           console.log('[McpBridge] Processing message with AI service');
           aiResponse = await aiService.processMessage(message, this.messageHistory);
         }
@@ -137,8 +150,8 @@ class McpBridge {
           resolve(aiResponse.message);
           return;
         }
-        // Otherwise fall back to rule-based parsing
-        else {
+        // Otherwise fall back to rule-based parsing if we don't already have a command
+        else if (!commandToExecute) {
           console.log('[McpBridge] Using rule-based parsing');
           const parsedCommand = this.parseUserInput(message);
           
@@ -162,7 +175,14 @@ class McpBridge {
               
               // Format a nice response
               let responseMessage = '';
-              if (commandToExecute.command === 'spawn_object') {
+              if (commandToExecute.command === 'test_unreal_connection') {
+                // Handle test_unreal_connection response
+                if (response && response.result && response.result.status === 'success') {
+                  responseMessage = `Successfully connected to Unreal Engine: ${response.result.result}`;
+                } else {
+                  responseMessage = `Failed to connect to Unreal Engine: ${response.result?.error || 'Unknown error'}`;
+                }
+              } else if (commandToExecute.command === 'spawn_object') {
                 responseMessage = `Created a ${commandToExecute.params.actor_class} at location [${commandToExecute.params.location.join(', ')}].`;
               } else if (commandToExecute.command === 'create_material') {
                 responseMessage = `Created a material named "${commandToExecute.params.material_name}" with the specified color.`;
@@ -239,6 +259,14 @@ class McpBridge {
   parseUserInput(input) {
     console.log('[McpBridge] Rule-based parsing of:', input);
     input = input.toLowerCase();
+    
+    // Direct command for test_unreal_connection
+    if (input === 'test_unreal_connection') {
+      return {
+        command: 'test_unreal_connection',
+        params: {}
+      };
+    }
     
     // Create basic shapes
     if (input.includes('create') || input.includes('add') || input.includes('make')) {

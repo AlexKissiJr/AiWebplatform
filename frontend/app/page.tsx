@@ -19,6 +19,7 @@ export default function Home() {
   const [socket, setSocket] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('rule-based');
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   const addMessage = useCallback((message: Message) => {
     console.log('Adding message:', message);
@@ -126,6 +127,39 @@ export default function Home() {
     }
   };
 
+  const testUnrealConnection = () => {
+    if (!socket || !isConnected) {
+      addMessage({
+        id: Date.now().toString(),
+        text: 'Error: Not connected to server. Cannot test Unreal connection.',
+        sender: 'ai',
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    setIsTestingConnection(true);
+    
+    // Create a message to show the user
+    addMessage({
+      id: Date.now().toString(),
+      text: 'Testing Unreal Engine connection...',
+      sender: 'user',
+      timestamp: Date.now(),
+    });
+
+    // Send the test command
+    socket.emit('sendMessage', { 
+      message: 'test_unreal_connection', 
+      modelId: 'rule-based' 
+    });
+
+    // Set a timeout to reset the button
+    setTimeout(() => {
+      setIsTestingConnection(false);
+    }, 5000);
+  };
+
   const handleModelChange = async (modelId: string) => {
     setSelectedModel(modelId);
     console.log('Selected model changed to:', modelId);
@@ -168,6 +202,18 @@ export default function Home() {
             Not connected to server. Please check your connection.
           </div>
         )}
+        
+        <div className="flex mt-4">
+          <button
+            onClick={testUnrealConnection}
+            disabled={isTestingConnection || !isConnected}
+            className={`bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 ${
+              (isTestingConnection || !isConnected) ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {isTestingConnection ? 'Testing...' : 'Test Unreal Connection'}
+          </button>
+        </div>
       </div>
       
       <ChatMessages messages={messages} />

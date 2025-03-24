@@ -23,6 +23,50 @@ const io = new Server(server, {
   }
 });
 
+// Direct connection to MCP server for test_unreal_connection
+function sendToMcpServer(command) {
+  return new Promise((resolve, reject) => {
+    console.log(`[Backend] Connecting to MCP server to send: ${JSON.stringify(command)}`);
+    
+    const ws = new WebSocket(process.env.MCP_SERVER_URL || 'ws://mcp_server:8765');
+    
+    ws.on('open', () => {
+      console.log('[Backend] Connected to MCP server, sending command...');
+      ws.send(JSON.stringify({
+        id: Date.now().toString(),
+        ...command
+      }));
+    });
+    
+    ws.on('message', (data) => {
+      console.log(`[Backend] Received MCP response: ${data.toString()}`);
+      
+      try {
+        const response = JSON.parse(data.toString());
+        resolve(response);
+      } catch (error) {
+        reject(new Error(`Failed to parse MCP response: ${error.message}`));
+      }
+      
+      ws.close();
+    });
+    
+    ws.on('error', (error) => {
+      console.error('[Backend] WebSocket error:', error);
+      reject(new Error(`WebSocket error: ${error.message}`));
+      ws.close();
+    });
+    
+    // Set timeout
+    setTimeout(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+        reject(new Error('MCP server connection timeout'));
+      }
+    }, 10000);
+  });
+}
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000'
@@ -123,7 +167,39 @@ io.on('connection', (socket) => {
       
       const { message, modelId } = data;
       
-      // Process the message using mcpBridge (which now uses AI service)
+      // Special handling for test_unreal_connection
+      if (message && message.trim().toLowerCase() === 'test_unreal_connection') {
+        console.log('[Backend] DETECTED test_unreal_connection command');
+        
+        try {
+          // Send to MCP server directly
+          const response = await sendToMcpServer({
+            command: 'test_unreal_connection',
+            params: {}
+          });
+          
+          console.log(`[Backend] Got MCP response: ${JSON.stringify(response)}`);
+          
+          // Format nice message for client
+          let responseMessage = '';
+          
+          if (response.result && response.result.status === 'success') {
+            responseMessage = `Connection test SUCCESS: ${response.result.result}`;
+          } else {
+            responseMessage = `Connection test FAILED: ${response.result?.error || 'Unknown error'}`;
+          }
+          
+          console.log(`[Backend] Sending client response: ${responseMessage}`);
+          socket.emit('messageResponse', { message: responseMessage });
+          return;
+        } catch (error) {
+          console.error('[Backend] Error handling test connection:', error);
+          socket.emit('messageResponse', { message: `Error testing connection: ${error.message}` });
+          return;
+        }
+      }
+      
+      // Process other messages using mcpBridge (which now uses AI service)
       const response = await mcpBridge.sendMessage(message, modelId || 'rule-based');
       
       console.log(`Sending response to client: ${response}`);
