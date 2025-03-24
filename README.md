@@ -1,106 +1,57 @@
-# AI Webplatform for Unreal Engine
+# Unreal Engine AI Assistant
 
-A SaaS platform that translates natural language into Unreal Engine commands using the UnrealGenAISupport plugin and Model Control Protocol (MCP).
+This is a simple interface for interacting with Unreal Engine through natural language commands. It provides a web interface with permission dialogs similar to Claude's.
 
-## Architecture
+## Requirements
 
-This project consists of three main components:
+- Node.js
+- Unreal Engine with WebSocket plugin enabled on port 9877
 
-1. **Frontend**: Next.js application with a chat interface
-2. **Backend**: Node.js server that communicates with the MCP server
-3. **MCP Server**: Python WebSocket server that communicates with Unreal Engine
+## Setup
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- Python 3.11+
-- Docker and Docker Compose (optional, for containerized deployment)
-
-### Development Setup
-
-1. **Clone the repository**
-
-```bash
-git clone https://github.com/yourusername/AiWebplatform.git
-cd AiWebplatform
-```
-
-2. **Setup the backend**
-
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Edit .env file with your configuration
-```
-
-3. **Setup the frontend**
-
-```bash
-cd frontend
-npm install
-```
-
-4. **Setup the MCP server**
-
-```bash
-cd mcp_server
-pip install -r requirements.txt
-```
-
-5. **Run the application in development mode**
-
-In three separate terminal windows:
-
-```bash
-# Terminal 1 - Run the MCP server
-cd mcp_server
-python mcp_server.py
-
-# Terminal 2 - Run the backend
-cd backend
-npm run dev
-
-# Terminal 3 - Run the frontend
-cd frontend
-npm run dev
-```
-
-### Using Docker Compose
-
-Alternatively, you can use Docker Compose to run all services:
-
-```bash
-docker-compose up
-```
-
-## Integrating with Unreal Engine
-
-1. Install the [UnrealGenAISupport plugin](https://github.com/AlexKissiJr/UnrealGenAISupport) in your Unreal Engine project
-2. Configure the plugin to connect to the MCP server
-3. Start using the AI Webplatform to send commands to Unreal Engine
+1. Clone this repository
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Start the server:
+   ```
+   npm start
+   ```
+4. Open http://localhost:3001 in your browser
 
 ## Features
 
-- Natural language processing for Unreal Engine commands
-- Real-time communication between the chat interface and Unreal Engine
-- Support for blueprint generation and code snippet creation
+- Simple web interface for sending commands to Unreal Engine
+- Claude-style permission dialog for each command
+- Natural language parsing for creating objects, setting colors, and positions
+- Direct WebSocket connection to Unreal Engine
 
-## Roadmap
+## Command Examples
 
-- [ ] User authentication and session management
-- [ ] Subscription and billing integration
-- [ ] Advanced natural language processing for complex commands
-- [ ] Blueprint visualization in the web interface
-- [ ] Code snippet highlighting and editing
+- "Create a red cube"
+- "Spawn a blue sphere"
+- "Create a green cylinder at position 100, 200, 50"
+- "Delete all objects"
 
-## License
+## How It Works
 
-MIT
+1. The web interface sends commands to the WebSocket server
+2. Commands are formatted into the structure Unreal Engine expects:
+   ```json
+   {
+     "spawn": {
+       "actor_class": "Cube",
+       "location": {"x": 0, "y": 0, "z": 100},
+       "rotation": {"pitch": 0, "yaw": 0, "roll": 0},
+       "scale": {"x": 1, "y": 1, "z": 1},
+       "properties": {"color": {"r": 1, "g": 0, "b": 0, "a": 1}}
+     }
+   }
+   ```
+3. The formatted commands are sent to Unreal Engine on port 9877
+4. Unreal Engine processes the commands and creates the specified objects
 
-## Acknowledgments
+## Configuration
 
-- [UnrealGenAISupport plugin](https://github.com/AlexKissiJr/UnrealGenAISupport) for the Unreal Engine integration
-- Model Control Protocol (MCP) for the communication standard 
+The WebSocket server runs on port 9879 and communicates with Unreal Engine on port 9877. You can modify these ports in the `final_client.js` file if needed. 

@@ -1,0 +1,550 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unreal Engine Command Interface</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .command-panel {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    .chat-container {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      height: 300px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+    
+    .input-area {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    
+    #messageInput {
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+    
+    button {
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background-color: #0055bb;
+    }
+    
+    .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    
+    .user-message {
+      background-color: #e6f7ff;
+      text-align: right;
+    }
+    
+    .system-message {
+      background-color: #f0f0f0;
+    }
+    
+    /* Permission Dialog Styles */
+    .permission-dialog {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #292929;
+      border-radius: 8px;
+      padding: 20px;
+      width: 90%;
+      max-width: 400px;
+      color: white;
+      z-index: 1000;
+    }
+    
+    .dialog-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 999;
+    }
+    
+    .warning {
+      display: flex;
+      background: rgba(255, 165, 0, 0.1);
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      align-items: flex-start;
+    }
+    
+    .warning svg {
+      min-width: 24px;
+      width: 24px;
+      height: 24px;
+      margin-right: 10px;
+      fill: orange;
+    }
+    
+    .dialog-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .dialog-buttons button {
+      padding: 8px 16px;
+    }
+    
+    .allow-button {
+      background-color: #4a4a4a;
+    }
+    
+    .allow-once-button {
+      background-color: #4a4a4a;
+    }
+    
+    .deny-button {
+      background-color: #e04f5f;
+    }
+    
+    .preset-commands {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .preset-button {
+      background-color: #f0f0f0;
+      color: #333;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+    }
+    
+    .preset-button:hover {
+      background-color: #e0e0e0;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+    
+    .status-connected {
+      background-color: #4CAF50;
+    }
+    
+    .status-disconnected {
+      background-color: #F44336;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Unreal Engine Command Interface</h1>
+    
+    <div class="command-panel">
+      <div id="connectionStatus">
+        <span class="status-indicator status-disconnected"></span>
+        Not connected to Unreal Engine
+      </div>
+      
+      <h2>Preset Commands</h2>
+      <div class="preset-commands">
+        <button class="preset-button" data-command="create a red cube at position 0,0,100">Create Red Cube</button>
+        <button class="preset-button" data-command="create a blue sphere at position 100,0,100">Create Blue Sphere</button>
+        <button class="preset-button" data-command="create a green cylinder at position -100,0,100">Create Green Cylinder</button>
+        <button class="preset-button" data-command="delete all objects in the scene">Delete All Objects</button>
+      </div>
+      
+      <h2>Custom Command</h2>
+      <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Enter your command...">
+        <button id="sendButton">Send</button>
+      </div>
+    </div>
+    
+    <div class="chat-container" id="chatMessages">
+      <div class="message system-message">System: Welcome to the Unreal Engine Command Interface!</div>
+    </div>
+  </div>
+  
+  <!-- Permission Dialog -->
+  <div class="dialog-overlay" id="dialogOverlay"></div>
+  <div class="permission-dialog" id="permissionDialog">
+    <div class="dialog-header">
+      <h3>Allow tool from "unreal-handshake" (local)?</h3>
+    </div>
+    <div class="dialog-content">
+      <div class="warning">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z"/>
+        </svg>
+        <p>Malicious MCP servers or conversation content could potentially trick the system into 
+        attempting harmful actions through your installed tools. Review each action 
+        carefully before approving.</p>
+      </div>
+      <div id="commandPreview" style="background: #3a3a3a; padding: 10px; border-radius: 4px; margin-top: 10px;">
+        Run spawn object from unreal-handshake
+      </div>
+    </div>
+    <div class="dialog-buttons">
+      <button id="allowButton" class="allow-button">Allow for This Chat</button>
+      <button id="allowOnceButton" class="allow-once-button">Allow Once</button>
+      <button id="denyButton" class="deny-button">Deny</button>
+    </div>
+  </div>
+
+  <script>
+    const chatMessages = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const dialogOverlay = document.getElementById('dialogOverlay');
+    const permissionDialog = document.getElementById('permissionDialog');
+    const allowButton = document.getElementById('allowButton');
+    const allowOnceButton = document.getElementById('allowOnceButton');
+    const denyButton = document.getElementById('denyButton');
+    const commandPreview = document.getElementById('commandPreview');
+    const presetButtons = document.querySelectorAll('.preset-button');
+    const connectionStatus = document.getElementById('connectionStatus');
+    
+    // Tool permissions
+    const toolPermissions = {
+      // toolName: 'always' | 'once' | 'never'
+    };
+    
+    // WebSocket connection
+    let socket = null;
+    let isConnected = false;
+    
+    // Current command being processed
+    let currentCommand = null;
+    
+    // Update connection status UI
+    function updateConnectionStatus() {
+      const indicator = connectionStatus.querySelector('.status-indicator');
+      
+      if (isConnected) {
+        indicator.classList.remove('status-disconnected');
+        indicator.classList.add('status-connected');
+        connectionStatus.innerHTML = '<span class="status-indicator status-connected"></span> Connected to Unreal Engine';
+      } else {
+        indicator.classList.remove('status-connected');
+        indicator.classList.add('status-disconnected');
+        connectionStatus.innerHTML = '<span class="status-indicator status-disconnected"></span> Not connected to Unreal Engine';
+      }
+    }
+    
+    // Connect to the server
+    function connectToServer() {
+      if (socket && socket.readyState <= 1) {
+        return; // Already connecting or connected
+      }
+      
+      console.log('Connecting to server...');
+      socket = new WebSocket('ws://localhost:9879');
+      
+      socket.onopen = () => {
+        console.log('Connected to server');
+        isConnected = true;
+        updateConnectionStatus();
+        addMessageToChat('Connected to server', 'system');
+      };
+      
+      socket.onmessage = (event) => {
+        console.log('Received message:', event.data);
+        try {
+          const response = JSON.parse(event.data);
+          
+          if (response.error) {
+            addMessageToChat('Error: ' + response.error, 'system');
+          } else if (response.success === false) {
+            addMessageToChat('Command failed: ' + (response.message || 'Unknown error'), 'system');
+          } else {
+            addMessageToChat('Unreal Engine: ' + (response.message || 'Command executed successfully'), 'system');
+          }
+        } catch (e) {
+          addMessageToChat('Unreal Engine: ' + event.data, 'system');
+        }
+      };
+      
+      socket.onclose = () => {
+        console.log('Disconnected from server');
+        isConnected = false;
+        updateConnectionStatus();
+        addMessageToChat('Disconnected from server', 'system');
+        
+        // Try to reconnect after 5 seconds
+        setTimeout(connectToServer, 5000);
+      };
+      
+      socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        addMessageToChat('Connection error', 'system');
+      };
+    }
+    
+    // Connect on page load
+    connectToServer();
+    
+    // Add event listeners
+    sendButton.addEventListener('click', handleSendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        handleSendMessage();
+      }
+    });
+    
+    allowButton.addEventListener('click', () => handlePermissionResponse('always'));
+    allowOnceButton.addEventListener('click', () => handlePermissionResponse('once'));
+    denyButton.addEventListener('click', () => handlePermissionResponse('never'));
+    
+    // Add preset button event listeners
+    presetButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        messageInput.value = button.getAttribute('data-command');
+        handleSendMessage();
+      });
+    });
+    
+    // Handle sending a message
+    function handleSendMessage() {
+      const message = messageInput.value.trim();
+      if (message === '') return;
+      
+      // Add user message to chat
+      addMessageToChat(message, 'user');
+      
+      // Check permissions before processing command
+      checkToolPermission('unreal-handshake', message)
+        .then(() => {
+          // Permission granted, process command
+          processCommand(message);
+        })
+        .catch((error) => {
+          // Permission denied
+          addMessageToChat('Command execution denied: ' + error.message, 'system');
+        });
+      
+      // Clear input
+      messageInput.value = '';
+    }
+    
+    // Add a message to the chat
+    function addMessageToChat(message, sender) {
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message');
+      
+      if (sender === 'user') {
+        messageElement.classList.add('user-message');
+        messageElement.textContent = 'You: ' + message;
+      } else {
+        messageElement.classList.add('system-message');
+        messageElement.textContent = message;
+      }
+      
+      chatMessages.appendChild(messageElement);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Check tool permission
+    function checkToolPermission(toolName, command) {
+      return new Promise((resolve, reject) => {
+        if (toolPermissions[toolName] === 'always') {
+          resolve();
+          return;
+        }
+        
+        if (toolPermissions[toolName] === 'never') {
+          reject(new Error('Permission denied'));
+          return;
+        }
+        
+        // Show permission dialog
+        currentCommand = command;
+        commandPreview.textContent = 'Run: ' + command;
+        
+        dialogOverlay.style.display = 'block';
+        permissionDialog.style.display = 'block';
+        
+        // Store resolve/reject functions for later use
+        checkToolPermission.currentResolve = resolve;
+        checkToolPermission.currentReject = reject;
+      });
+    }
+    
+    // Handle permission response
+    function handlePermissionResponse(response) {
+      dialogOverlay.style.display = 'none';
+      permissionDialog.style.display = 'none';
+      
+      if (response === 'always' || response === 'once') {
+        // Store permission
+        if (response === 'always') {
+          toolPermissions['unreal-handshake'] = 'always';
+        } else {
+          toolPermissions['unreal-handshake'] = 'once';
+        }
+        
+        // Resolve the promise
+        if (checkToolPermission.currentResolve) {
+          checkToolPermission.currentResolve();
+          checkToolPermission.currentResolve = null;
+          checkToolPermission.currentReject = null;
+        }
+      } else {
+        // Deny permission
+        toolPermissions['unreal-handshake'] = 'never';
+        
+        // Reject the promise
+        if (checkToolPermission.currentReject) {
+          checkToolPermission.currentReject(new Error('User denied permission'));
+          checkToolPermission.currentResolve = null;
+          checkToolPermission.currentReject = null;
+        }
+      }
+      
+      // Reset after 'once' permission
+      if (response === 'once') {
+        setTimeout(() => {
+          toolPermissions['unreal-handshake'] = null;
+        }, 100);
+      }
+    }
+    
+    // Process a command
+    function processCommand(command) {
+      // Make sure we're connected
+      if (!isConnected) {
+        addMessageToChat('Not connected to server. Trying to reconnect...', 'system');
+        connectToServer();
+        
+        // Queue the command to be sent when connected
+        setTimeout(() => {
+          if (isConnected) {
+            processCommand(command);
+          } else {
+            addMessageToChat('Failed to connect to server', 'system');
+          }
+        }, 2000);
+        
+        return;
+      }
+      
+      // Parse the command using natural language
+      let commandObj = {};
+      
+      // Special case for delete all
+      if (command.toLowerCase().includes('delete all')) {
+        commandObj = {
+          "delete_all": {}
+        };
+      } 
+      // Create objects
+      else if (command.toLowerCase().includes('create') || command.toLowerCase().includes('spawn')) {
+        let actorClass = "Cube"; // Default
+        let color = { r: 1, g: 0, b: 0, a: 1 }; // Default red
+        let location = { x: 0, y: 0, z: 100 }; // Default position
+        
+        // Parse actor class
+        if (command.toLowerCase().includes('cube')) {
+          actorClass = "Cube";
+        } else if (command.toLowerCase().includes('sphere')) {
+          actorClass = "Sphere"; 
+        } else if (command.toLowerCase().includes('cylinder')) {
+          actorClass = "Cylinder";
+        }
+        
+        // Parse color
+        if (command.toLowerCase().includes('red')) {
+          color = { r: 1, g: 0, b: 0, a: 1 };
+        } else if (command.toLowerCase().includes('blue')) {
+          color = { r: 0, g: 0, b: 1, a: 1 };
+        } else if (command.toLowerCase().includes('green')) {
+          color = { r: 0, g: 1, b: 0, a: 1 };
+        }
+        
+        // Parse position if specified
+        const posMatch = command.match(/positions+(-?d+),s*(-?d+),s*(-?d+)/i);
+        if (posMatch) {
+          location = {
+            x: parseInt(posMatch[1]),
+            y: parseInt(posMatch[2]),
+            z: parseInt(posMatch[3])
+          };
+        }
+        
+        // Format command as { "command": { params } }
+        commandObj = {
+          "spawn": {
+            "actor_class": actorClass,
+            "location": location,
+            "rotation": { pitch: 0, yaw: 0, roll: 0 },
+            "scale": { x: 1, y: 1, z: 1 },
+            "properties": {
+              "color": color
+            }
+          }
+        };
+      }
+      // Unknown command
+      else {
+        // Try a handshake if we don't understand
+        commandObj = {
+          "handshake": {
+            "message": command
+          }
+        };
+      }
+      
+      console.log('Sending command:', JSON.stringify(commandObj));
+      addMessageToChat('Sending command to Unreal Engine...', 'system');
+      
+      // Send the command
+      socket.send(JSON.stringify(commandObj));
+    }
+  </script>
+</body>
+</html>

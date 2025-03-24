@@ -1,0 +1,26 @@
+{
+  "name": "unreal-ai-assistant",
+  "version": "1.0.0",
+  "description": "A simple interface for controlling Unreal Engine via WebSocket",
+  "main": "final_client.js",
+  "scripts": {
+    "start": "node final_client.js",
+    "dev": "nodemon final_client.js"
+  },
+  "keywords": [
+    "unreal-engine",
+    "websocket",
+    "tcp",
+    "bridge",
+    "proxy"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
